@@ -1,1 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vermillion M+ | Car Livery Customizer</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <style>
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family: Arial, sans-serif; background:#111; color:#eee; }
+    #container { display:flex; height:100%; }
+    #canvas { flex:1; touch-action:none; }
+    #sidebar {
+      width:320px; background:#222; border-left:1px solid #444; display:flex; flex-direction:column; overflow:hidden;
+    }
+    .tabs { display:flex; background:#000; }
+    .tab {
+      flex:1; padding:14px; text-align:center; cursor:pointer; font-weight:bold; transition:0.2s;
+      border-bottom:3px solid transparent;
+    }
+    .tab.active { background:#1a1a1a; border-bottom:3px solid #0066ff; color:#fff; }
+    .tab:hover { background:#333; }
+    .panel { flex:1; overflow-y:auto; padding:10px; display:none; }
+    .panel.active { display:block; }
+    .item {
+      background:#333; margin:8px 0; padding:12px; border-radius:6px; cursor:pointer; text-align:center; transition:0.15s;
+    }
+    .item:hover { background:#444; transform:scale(1.02); }
+    #logo {
+      position:absolute; bottom:15px; right:15px; font-size:28px; font-weight:bold; color:#ff4500;
+      text-shadow:0 0 10px #ff4500; pointer-events:none; z-index:10;
+    }
+    h3 { margin:10px 0; color:#aaa; }
+    .controls { padding:12px; background:#1a1a1a; border-top:1px solid #444; text-align:center; font-size:14px; }
+    .controls label { cursor:pointer; display:block; margin:8px 0; }
+    #speedContainer { margin-top:12px; }
+    input[type="range"] { width:90%; accent-color:#0066ff; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <canvas id="canvas"></canvas>
 
+    <div id="sidebar">
+      <div class="tabs">
+        <div class="tab active" data-tab="vehicles">Vehicles</div>
+        <div class="tab" data-tab="wraps">Wraps</div>
+        <div class="tab" data-tab="decals">Decals</div>
+      </div>
+
+      <div id="vehicles" class="panel active">
+        <h3>Select Vehicle</h3>
+        <!-- Replace URLs with your hosted GLB files (GitHub raw, Vercel, etc.) -->
+        <div class="item" data-model="https://models.babylonjs.com/mustang_7.glb">Ford Mustang (sample)</div>
+        <div class="item" data-model="https://cdn.glitch.global/your-project/dodge-challenger.glb">Dodge Challenger SRT</div>
+        <div class="item" data-model="https://cdn.glitch.global/your-project/corvette-c7.glb">C7 Corvette</div>
+        <div class="item" data-model="https://cdn.glitch.global/your-project/bmw-m2-comp.glb">BMW M2 Competition</div>
+      </div>
+
+      <div id="wraps" class="panel">
+        <h3>Wraps / Base Finishes</h3>
+        <!-- Solid colors for now – extend to textures below -->
+        <div class="item" data-color="#ff0000">Red Matte</div>
+        <div class="item" data-color="#00ff00">Green Metallic</div>
+        <div class="item" data-color="#0000ff">Blue Gloss</div>
+        <div class="item" data-color="#ffffff">White Pearl</div>
+        <div class="item" data-color="#1a1a1a">Black Carbon</div>
+        <!-- Example texture wraps (uncomment & add real URLs when ready)
+        <div class="item" data-wrap="carbon">Carbon Fiber</div>
+        <div class="item" data-wrap="matte-black">Matte Black Vinyl</div>
+        -->
+      </div>
+
+      <div id="decals" class="panel">
+        <h3>Add Decals</h3>
+        <p>Click a decal below, then click on the car to place it.</p>
+        <div class="item" data-decal="stripe">Racing Stripe</div>
+        <div class="item" data-decal="number">Number #23</div>
+        <div class="item" data-decal="logo">Team Logo</div>
+      </div>
+
+      <div class="controls">
+        <label>
+          <input type="checkbox" id="autoRotateToggle" checked> Auto-rotate view
+        </label>
+        <div id="speedContainer">
+          <label for="rotationSpeed" style="display:block; margin-bottom:6px; color:#aaa; font-size:13px;">
+            Rotation Speed
+          </label>
+          <input type="range" id="rotationSpeed" min="0" max="100" value="25" step="1">
+          <div id="speedValue" style="margin-top:6px; font-size:13px; color:#ccc;">
+            Speed: Medium (~0.04 rad/s)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="logo">V⁺ VERMILLION M⁺</div>
+
+  <script>
+    // ────────────────────────────────────────────────
+    // Babylon.js Setup
+    // ────────────────────────────────────────────────
+    const canvas = document.getElementById("canvas");
+    const engine = new BABYLON.Engine(canvas, true);
+
+    let scene, camera, currentCar;
+    let autoRotateEnabled = true;
+    let currentSpeed = 0.04;
+    let placementMode = false;
+    let selectedDecalType = null;
+
+    function createScene() {
+      scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.12, 1);
+
+      camera = new BABYLON.ArcRotateCamera("cam", Math.PI / 2, Math.PI / 2.2, 15, BABYLON.Vector3.Zero(), scene);
+      camera.attachControl(canvas, true);
+      camera.minZ = 0.1;
+      camera.wheelPrecision = 50;
+      camera.lowerRadiusLimit = 8;
+      camera.upperRadiusLimit = 30;
+
+      // Auto-rotation behavior
+      camera.useAutoRotationBehavior = true;
+      const autoRotateBehavior = camera.getAutoRotationBehavior();
+      autoRotateBehavior.idleRotationSpeed = currentSpeed;
+      autoRotateBehavior.idleRotationWaitTime = 2000;
+      autoRotateBehavior.idleRotationSpinUpTime = 1500;
+      autoRotateBehavior.zoomStopsAnimation = true;
+
+      // Lights
+      const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+      light.intensity = 0.8;
+      const dirLight = new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(-2, -3, -1), scene);
+      dirLight.intensity = 0.6;
+
+      // Simple ground
+      const ground = BABYLON.MeshBuilder.CreateGround("ground", {width:60, height:60}, scene);
+      ground.position.y = -2;
+      const groundMat = new BABYLON.StandardMaterial("groundMat", scene);
+      groundMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+      groundMat.specularColor = new BABYLON.Color3(0.1,0.1,0.1);
+      ground.material = groundMat;
+
+      return scene;
+    }
+
+    scene = createScene();
+
+    // Default model
+    loadModel("https://models.babylonjs.com/mustang_7.glb");
+
+    // ────────────────────────────────────────────────
+    // Load Model Function
+    // ────────────────────────────────────────────────
+    function loadModel(url) {
+      if (currentCar) currentCar.dispose();
+      BABYLON.SceneLoader.ImportMeshAsync("", "", url, scene).then((result) => {
+        currentCar = result.meshes[0]; // root mesh
+        currentCar.position.y = 0;
+        currentCar.scaling = new BABYLON.Vector3(1.2, 1.2, 1.2);
+
+        const bbox = result.meshes[0].getBoundingInfo().boundingBox;
+        currentCar.position.subtractInPlace(bbox.centerWorld);
+      }).catch(err => console.error("Model load error:", err));
+    }
+
+    // ────────────────────────────────────────────────
+    // UI Event Listeners
+    // ────────────────────────────────────────────────
+    // Tabs
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById(tab.dataset.tab).classList.add("active");
+      });
+    });
+
+    // Vehicle selection
+    document.querySelectorAll("#vehicles .item").forEach(item => {
+      item.addEventListener("click", () => {
+        const url = item.dataset.model;
+        if (url) loadModel(url);
+      });
+    });
+
+    // Wraps – solid color for now (extend to PBR textures later)
+    document.querySelectorAll("#wraps .item").forEach(item => {
+      item.addEventListener("click", () => {
+        if (!currentCar) return;
+
+        if (item.dataset.color) {
+          const color = BABYLON.Color3.FromHexString(item.dataset.color);
+          currentCar.getChildMeshes().forEach(mesh => {
+            if (mesh.material) {
+              mesh.material = new BABYLON.PBRMetallicRoughnessMaterial("wrap", scene);
+              mesh.material.baseColor = color;
+              mesh.material.metallic = 0.1;
+              mesh.material.roughness = 0.4;
+            }
+          });
+        }
+        // Future: texture-based wraps using item.dataset.wrap
+      });
+    });
+
+    // Decals – placement mode
+    document.querySelectorAll("#decals .item").forEach(item => {
+      item.addEventListener("click", () => {
+        placementMode = true;
+        selectedDecalType = item.dataset.decal;
+        alert(`Placement mode ON: "${item.textContent}" – click on the car to place.`);
+      });
+    });
+
+    // Auto-rotate toggle
+    const toggle = document.getElementById("autoRotateToggle");
+    const speedSlider = document.getElementById("rotationSpeed");
+    const speedDisplay = document.getElementById("speedValue");
+    const speedContainer = document.getElementById("speedContainer");
+
+    toggle.addEventListener("change", (e) => {
+      autoRotateEnabled = e.target.checked;
+      camera.useAutoRotationBehavior = autoRotateEnabled;
+      if (!autoRotateEnabled) camera.inertialAlphaOffset = 0;
+      speedSlider.disabled = !autoRotateEnabled;
+      speedContainer.style.opacity = autoRotateEnabled ? "1" : "0.5";
+    });
+
+    // Rotation speed slider
+    speedSlider.addEventListener("input", (e) => {
+      const val = parseInt(e.target.value, 10);
+      currentSpeed = (val / 100) * 0.15;
+      if (camera && camera.getAutoRotationBehavior()) {
+        camera.getAutoRotationBehavior().idleRotationSpeed = currentSpeed;
+      }
+
+      let label = val === 0 ? "Stopped" : 
+                  val < 30 ? "Slow" : 
+                  val < 60 ? "Medium" : 
+                  val < 85 ? "Fast" : "Very Fast";
+
+      speedDisplay.textContent = `Speed: ${label} (${currentSpeed.toFixed(3)} rad/s)`;
+    });
+
+    // Initial slider display
+    speedSlider.dispatchEvent(new Event("input"));
+
+    // ────────────────────────────────────────────────
+    // Decal Placement (click on car)
+    // ────────────────────────────────────────────────
+    const decalMaterial = new BABYLON.StandardMaterial("decalMat", scene);
+    decalMaterial.backFaceCulling = false;
+
+    // Simple placeholder textures – replace with real transparent PNG URLs
+    const decalTextures = {
+      stripe: "https://via.placeholder.com/512x128/0000FF/FFFFFF?text=Stripe",
+      number: "https://via.placeholder.com/256x256/FF0000/FFFFFF?text=23",
+      logo:   "https://via.placeholder.com/512x512/FFFF00/000000?text=LOGO"
+    };
+
+    scene.onPointerDown = (evt, pickInfo) => {
+      if (!placementMode || !pickInfo.hit) return;
+
+      // Only place on the car (basic check – improve if multi-mesh)
+      if (!currentCar || !pickInfo.pickedMesh || !pickInfo.pickedMesh.isDescendantOf(currentCar)) return;
+
+      const size = selectedDecalType === "stripe" ? 4 : 2.5;
+
+      const decal = BABYLON.MeshBuilder.CreateDecal("decal", pickInfo.pickedMesh, {
+        position: pickInfo.pickedPoint,
+        normal: pickInfo.getNormal(true),
+        size: new BABYLON.Vector3(size, size, 1)
+      });
+
+      decalMaterial.diffuseTexture = new BABYLON.Texture(decalTextures[selectedDecalType] || decalTextures.logo, scene);
+      decalMaterial.diffuseTexture.hasAlpha = true;
+      decal.material = decalMaterial;
+
+      placementMode = false; // one placement per click – remove to allow multiple
+    };
+
+    // ────────────────────────────────────────────────
+    // Render Loop & Resize
+    // ────────────────────────────────────────────────
+    engine.runRenderLoop(() => scene.render());
+    window.addEventListener("resize", () => engine.resize());
+  </script>
+</body>
+</html>
