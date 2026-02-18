@@ -1,3 +1,5 @@
+scene = createScene();
+window.scene = scene;   // ← Add this line
 // Data for vehicles, wraps, and decals (replace URLs with your hosted files)
 const cars = [
     { name: 'Dodge Challenger', url: 'https://raw.githubusercontent.com/sooshboi/CARMODELS/main/models/DODGE%20HELLCAT%20SRT%20BY%20ME.glb' }, // Download from https://sketchfab.com/3d-models/dodge-hellcat-srt-by-grid-studios-b412acf943ac4bff8465b19f20a655ff
