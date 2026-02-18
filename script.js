@@ -1,8 +1,8 @@
 // Data for vehicles, wraps, and decals (replace URLs with your hosted files)
 const cars = [
-    { name: 'Dodge Challenger', url: 'path/to/dodge-challenger.glb' }, // Download from https://sketchfab.com/3d-models/dodge-hellcat-srt-by-grid-studios-b412acf943ac4bff8465b19f20a655ff
-    { name: 'C7 Corvette', url: 'path/to/c7-corvette.glb' }, // Download from https://sketchfab.com/3d-models/chevrolet-corvette-c7-free-cd0db5aa1dc842d49088f8278bae564d
-    { name: 'BMW M2 Comp', url: 'path/to/bmw-m2-comp.glb' } // Download from https://sketchfab.com/3d-models/2018-bmw-m2-competition-30ed9c85be1f44878181d7683b65a068
+    { name: 'Dodge Challenger', url: 'https://raw.githubusercontent.com/sooshboi/CARMODELS/main/models/DODGE%20HELLCAT%20SRT%20BY%20ME.glb' }, // Download from https://sketchfab.com/3d-models/dodge-hellcat-srt-by-grid-studios-b412acf943ac4bff8465b19f20a655ff
+    { name: 'C7 Corvette', url: 'https://raw.githubusercontent.com/sooshboi/CARMODELS/main/models/%D0%A1hevrolet%20%D0%A1orvette%20%D0%A17%20.glbb' }, // Download from https://sketchfab.com/3d-models/chevrolet-corvette-c7-free-cd0db5aa1dc842d49088f8278bae564d
+    { name: 'BMW M2 Comp', url: 'https://raw.githubusercontent.com/sooshboi/CARMODELS/main/models/2018%20BMW%20M2%20CS.glb' } // Download from https://sketchfab.com/3d-models/2018-bmw-m2-competition-30ed9c85be1f44878181d7683b65a068
 ];
 
 const wraps = [
